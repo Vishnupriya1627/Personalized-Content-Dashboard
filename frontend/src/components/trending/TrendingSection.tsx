@@ -52,7 +52,7 @@ export default function TrendingSection({ title, icon: Icon, type, categories }:
 
       {data && data.length > 0 && (
         <ul className={gridClass}>
-          {data.map((item, index) => (
+          {data.map((item) => (
             <li key={item.id} className="relative">
               {/* <span
                 aria-label={`Rank ${index + 1}`}
