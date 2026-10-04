@@ -1,22 +1,37 @@
-import { useState } from 'react';
-import { Newspaper, Film, MessageCircle, ExternalLink } from 'lucide-react';
-import type { ContentItem, ContentType } from '@/types/content';
+import { useState } from "react";
+import {
+  Newspaper,
+  Film,
+  MessageCircle,
+  ExternalLink,
+  Heart,
+} from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { toggleFavorite } from "@/features/favorites/favoritesSlice";
+import type { ContentItem, ContentType } from "@/types/content";
 
-const typeMeta: Record<ContentType, { label: string; cta: string; icon: typeof Newspaper }> = {
-  news: { label: 'News', cta: 'Read More', icon: Newspaper },
-  movie: { label: 'Movie', cta: 'View Details', icon: Film },
-  social: { label: 'Post', cta: 'View Post', icon: MessageCircle },
+const typeMeta: Record<
+  ContentType,
+  { label: string; cta: string; icon: typeof Newspaper }
+> = {
+  news: { label: "News", cta: "Read More", icon: Newspaper },
+  movie: { label: "Movie", cta: "View Details", icon: Film },
+  social: { label: "Post", cta: "View Post", icon: MessageCircle },
 };
 
 export default function ContentCard({ item }: { item: ContentItem }) {
   const [imgFailed, setImgFailed] = useState(false);
+  const dispatch = useAppDispatch();
+  const isFavorite = useAppSelector((s) =>
+    s.favorites.items.some((f) => f.id === item.id),
+  );
   const { label, cta, icon: Icon } = typeMeta[item.type];
   const showImage = item.image && !imgFailed;
 
   const date = new Date(item.publishedAt).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 
   return (
@@ -36,16 +51,40 @@ export default function ContentCard({ item }: { item: ContentItem }) {
             <Icon size={36} aria-hidden="true" />
           </div>
         )}
+
         <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-surface/90 px-2.5 py-1 text-xs font-medium text-text backdrop-blur">
           <Icon size={12} aria-hidden="true" />
           {label}
         </span>
+
+        <button
+          type="button"
+          onClick={() => dispatch(toggleFavorite(item))}
+          aria-pressed={isFavorite}
+          aria-label={
+            isFavorite
+              ? `Remove ${item.title} from favorites`
+              : `Add ${item.title} to favorites`
+          }
+          className="absolute right-3 top-3 rounded-full bg-surface/90 p-2 backdrop-blur transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-brand/40"
+        >
+          <Heart
+            size={16}
+            aria-hidden="true"
+            className={isFavorite ? "text-red-600" : "text-muted"}
+            fill={isFavorite ? "currentColor" : "none"}
+          />
+        </button>
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="line-clamp-2 font-semibold leading-snug text-text">{item.title}</h3>
+        <h3 className="line-clamp-2 font-semibold leading-snug text-text">
+          {item.title}
+        </h3>
         {item.description && (
-          <p className="mt-2 line-clamp-3 text-sm text-muted">{item.description}</p>
+          <p className="mt-2 line-clamp-3 text-sm text-muted">
+            {item.description}
+          </p>
         )}
 
         <div className="mt-auto pt-4">

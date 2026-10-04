@@ -1,16 +1,60 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { combineReducers, configureStore } from '@reduxjs/toolkit';
+import {
+  persistStore,
+  persistReducer,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from 'redux-persist';
 import authReducer from '@/features/auth/authSlice';
 import preferencesReducer from '@/features/preferences/preferencesSlice';
+import favoritesReducer from '@/features/favorites/favoritesSlice';
 import { contentApi } from '@/features/api/contentApi';
+import autoMergeLevel2 from 'redux-persist/es/stateReconciler/autoMergeLevel2';
 
-export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    preferences: preferencesReducer,
-    [contentApi.reducerPath]: contentApi.reducer,
+const storage = {
+  getItem: (key: string) => Promise.resolve(localStorage.getItem(key)),
+  setItem: (key: string, value: string) => {
+    localStorage.setItem(key, value);
+    return Promise.resolve();
   },
-  middleware: (getDefault) => getDefault().concat(contentApi.middleware),
+  removeItem: (key: string) => {
+    localStorage.removeItem(key);
+    return Promise.resolve();
+  },
+};
+
+const rootReducer = combineReducers({
+  auth: authReducer,
+  preferences: preferencesReducer,
+  favorites: favoritesReducer,
+  [contentApi.reducerPath]: contentApi.reducer,
 });
 
-export type RootState = ReturnType<typeof store.getState>;
+const persistedReducer = persistReducer(
+  {
+    key: 'root',
+    storage,
+    whitelist: ['preferences', 'favorites'],
+    stateReconciler: autoMergeLevel2,
+  },
+  rootReducer
+);
+
+export const store = configureStore({
+  reducer: persistedReducer,
+  middleware: (getDefault) =>
+    getDefault({
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+      },
+    }).concat(contentApi.middleware),
+});
+
+export const persistor = persistStore(store);
+
+export type RootState = ReturnType<typeof rootReducer>;
 export type AppDispatch = typeof store.dispatch;
