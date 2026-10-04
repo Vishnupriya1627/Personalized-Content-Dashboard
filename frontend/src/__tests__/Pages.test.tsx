@@ -1,10 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FavoritesPage from '@/pages/FavoritesPage';
 import SettingsPage from '@/pages/SettingsPage';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { makeItem } from '@/test/factories';
+
+vi.mock('@/lib/firebase', () => ({ auth: {} }));
+vi.mock('firebase/auth', () => ({ updateProfile: vi.fn() }));
 
 describe('FavoritesPage', () => {
   it('shows an empty state with no favorites', () => {

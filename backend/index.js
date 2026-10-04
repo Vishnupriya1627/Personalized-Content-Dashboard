@@ -4,12 +4,16 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import { posts } from './mockSocial.js';
+import { createServer } from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
+import { generateLiveItem } from './liveFeed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
-app.use(cors({ origin: ['http://localhost:5173'] }));
+const ALLOWED_ORIGINS = ['http://localhost:5173', process.env.FRONTEND_URL].filter(Boolean);
+app.use(cors({ origin: ALLOWED_ORIGINS }));
 
 const PORT = process.env.PORT || 4000;
 const NEWS_KEY = process.env.NEWS_API_KEY;
@@ -220,4 +224,50 @@ app.get('/api/social', (req, res) => {
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-app.listen(PORT, () => console.log(`API server running on http://localhost:${PORT}`));
+// ---------- WebSocket: live feed ----------
+const server = createServer(app);
+const wss = new WebSocketServer({ server, path: '/ws' });
+
+const LIVE_INTERVAL_MS = Number(process.env.LIVE_INTERVAL_MS) || 8000;
+
+wss.on('connection', (ws, req) => {
+  // Browsers don't enforce CORS on WebSockets, so check the origin ourselves
+  const origin = req.headers.origin;
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    ws.close(1008, 'Origin not allowed');
+    return;
+  }
+
+  ws.isAlive = true;
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+  ws.on('error', (err) => console.error('WS client error:', err.message));
+  ws.send(JSON.stringify({ type: 'connected' }));
+});
+
+const broadcastTimer = setInterval(() => {
+  if (wss.clients.size === 0) return;
+  const message = JSON.stringify({ type: 'new_item', payload: generateLiveItem() });
+  for (const client of wss.clients) {
+    if (client.readyState === WebSocket.OPEN) client.send(message);
+  }
+}, LIVE_INTERVAL_MS);
+
+const heartbeatTimer = setInterval(() => {
+  for (const client of wss.clients) {
+    if (client.isAlive === false) {
+      client.terminate();
+      continue;
+    }
+    client.isAlive = false;
+    client.ping();
+  }
+}, 30000);
+
+wss.on('close', () => {
+  clearInterval(broadcastTimer);
+  clearInterval(heartbeatTimer);
+});
+
+server.listen(PORT, () => console.log(`API + WebSocket server running on http://localhost:${PORT}`));

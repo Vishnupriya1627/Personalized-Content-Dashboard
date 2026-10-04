@@ -3,8 +3,11 @@ import { useLocation, useOutlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
+import { useLiveFeed } from '@/hooks/useLiveFeed';
 
 export default function DashboardLayout() {
+  useLiveFeed(); // one WebSocket for the whole dashboard
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const outlet = useOutlet();

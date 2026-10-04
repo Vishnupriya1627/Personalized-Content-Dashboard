@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import PageTitle from '@/components/PageTitle';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setCategories } from '@/features/preferences/preferencesSlice';
+import ProfileSection from '@/components/settings/ProfileSection';
 
 const ALL_CATEGORIES = [
   { id: 'technology', label: 'Technology' },
@@ -25,6 +26,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageTitle title="Settings" subtitle="Choose the categories you want in your feed." />
+
+      <ProfileSection />
 
       <section aria-labelledby="cat-heading" className="rounded-xl border border-border bg-surface p-5">
         <h2 id="cat-heading" className="font-semibold text-text">Favorite categories</h2>

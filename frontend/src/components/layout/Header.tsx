@@ -1,34 +1,35 @@
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Menu, Search, X } from 'lucide-react';
-import ThemeToggle from './ThemeToggle';
-import UserMenu from './UserMenu';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useAppDispatch } from '@/store/hooks';
-import { setSearchQuery } from '@/features/search/searchSlice';
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Menu, Search, X } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
+import UserMenu from "./UserMenu";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useAppDispatch } from "@/store/hooks";
+import { setSearchQuery } from "@/features/search/searchSlice";
+import LiveBadge from "./LiveBadge";
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const debounced = useDebounce(query, 400);
 
   // Debounced value updates the store; fewer than 2 characters means "no search"
   useEffect(() => {
     const term = debounced.trim();
-    const next = term.length >= 2 ? term : '';
+    const next = term.length >= 2 ? term : "";
     dispatch(setSearchQuery(next));
-    if (next && pathname !== '/') navigate('/');
+    if (next && pathname !== "/") navigate("/");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced]);
 
   // Leaving the feed clears the search
   useEffect(() => {
-    if (pathname !== '/') {
-      setQuery('');
-      dispatch(setSearchQuery(''));
+    if (pathname !== "/") {
+      setQuery("");
+      dispatch(setSearchQuery(""));
     }
   }, [pathname, dispatch]);
 
@@ -42,7 +43,11 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
         <Menu size={20} />
       </button>
 
-      <form role="search" onSubmit={(e) => e.preventDefault()} className="relative max-w-xl flex-1">
+      <form
+        role="search"
+        onSubmit={(e) => e.preventDefault()}
+        className="relative max-w-xl flex-1"
+      >
         <Search
           size={18}
           aria-hidden="true"
@@ -59,7 +64,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
         {query && (
           <button
             type="button"
-            onClick={() => setQuery('')}
+            onClick={() => setQuery("")}
             aria-label="Clear search"
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:text-text"
           >
@@ -69,6 +74,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
       </form>
 
       <div className="ml-auto flex items-center gap-1">
+        <LiveBadge />
         <ThemeToggle />
         <UserMenu />
       </div>
