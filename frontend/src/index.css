@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f7f2eb;
+  --surface: #fffdfa;
+  --text: #2b2f22;
+  --muted: #6f6a5e;
+  --border: #eae2d6;
+  --accent: #8b9a6e;
+  --on-accent: #232819;
+  --brand: #6b7a4f;
+  --brand-hover: #586541;
+  --on-brand: #ffffff;
+}
+
+.dark {
+  --bg: #1a1c16;
+  --surface: #23261d;
+  --text: #f1ece2;
+  --muted: #a8a395;
+  --border: #34382b;
+  --accent: #8b9a6e;
+  --on-accent: #232819;
+  --brand: #a3b383;
+  --brand-hover: #b5c496;
+  --on-brand: #1a1c16;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand: var(--on-brand);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
