@@ -7,9 +7,11 @@ import TrendingPage from '@/pages/TrendingPage';
 import FavoritesPage from '@/pages/FavoritesPage';
 import SettingsPage from '@/pages/SettingsPage';
 import { MotionConfig } from 'framer-motion';
+import SearchPage from '@/pages/SearchPage';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/search', element: <SearchPage /> },
   {
     element: <ProtectedRoute />,
     children: [
