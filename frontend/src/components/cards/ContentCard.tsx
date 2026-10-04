@@ -1,15 +1,17 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Newspaper,
   Film,
   MessageCircle,
   ExternalLink,
   Heart,
+  Check,
 } from "lucide-react";
+import type { ContentItem, ContentType } from "@/types/content";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleFavorite } from "@/features/favorites/favoritesSlice";
-import type { ContentItem, ContentType } from "@/types/content";
-import { motion } from "framer-motion";
+import { markRead, toggleRead } from "@/features/read/readSlice";
 
 const typeMeta: Record<
   ContentType,
@@ -26,6 +28,9 @@ export default function ContentCard({ item }: { item: ContentItem }) {
   const isFavorite = useAppSelector((s) =>
     s.favorites.items.some((f) => f.id === item.id),
   );
+  const isRead = useAppSelector((s) =>
+    s.read.items.some((r) => r.id === item.id),
+  );
   const { label, cta, icon: Icon } = typeMeta[item.type];
   const showImage = item.image && !imgFailed;
 
@@ -38,8 +43,8 @@ export default function ContentCard({ item }: { item: ContentItem }) {
   return (
     <motion.article
       initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
+      animate={{ opacity: isRead ? 0.75 : 1, y: 0 }}
+      whileHover={{ y: -4, opacity: 1 }}
       transition={{ duration: 0.25 }}
       className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface transition-shadow hover:shadow-md"
     >
@@ -54,8 +59,16 @@ export default function ContentCard({ item }: { item: ContentItem }) {
             className="h-full w-full object-cover object-top"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted">
-            <Icon size={36} aria-hidden="true" />
+          <div
+            className={`flex h-full w-full items-center justify-center ${
+              item.type === "news"
+                ? "bg-gradient-to-br from-accent/30 to-border"
+                : item.type === "movie"
+                  ? "bg-gradient-to-br from-brand/25 to-border"
+                  : "bg-gradient-to-br from-border to-accent/20"
+            } text-brand`}
+          >
+            <Icon size={40} aria-hidden="true" />
           </div>
         )}
 
@@ -98,16 +111,38 @@ export default function ContentCard({ item }: { item: ContentItem }) {
           <p className="mb-3 text-xs text-muted">
             {item.source} · {date}
           </p>
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-on-brand transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/40"
-          >
-            {cta}
-            <ExternalLink size={14} aria-hidden="true" />
-            <span className="sr-only"> (opens in a new tab)</span>
-          </a>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => dispatch(markRead(item))}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-on-brand transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/40"
+            >
+              {cta}
+              <ExternalLink size={14} aria-hidden="true" />
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={() => dispatch(toggleRead(item))}
+              aria-pressed={isRead}
+              aria-label={
+                isRead
+                  ? `Mark ${item.title} as unread`
+                  : `Mark ${item.title} as read`
+              }
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-brand/40 ${
+                isRead
+                  ? "border-accent bg-accent text-on-accent"
+                  : "border-border text-muted hover:text-text"
+              }`}
+            >
+              <Check size={14} aria-hidden="true" />
+              {isRead ? "Read" : "Mark read"}
+            </button>
+          </div>
         </div>
       </div>
     </motion.article>

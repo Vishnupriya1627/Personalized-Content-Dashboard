@@ -1,11 +1,11 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
-import { posts } from './mockSocial.js';
-import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
+import { posts } from './mockSocial.js';
 import { generateLiveItem } from './liveFeed.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -24,8 +24,46 @@ const NEWS_CATEGORIES = ['business', 'entertainment', 'general', 'health', 'scie
 // ---------- helpers ----------
 async function getJson(url) {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Upstream error ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const body = await res.json();
+      detail = body.Error || body.message || '';
+    } catch {
+      /* body wasn't JSON */
+    }
+    throw new Error(`Upstream error ${res.status}${detail ? `: ${detail}` : ''}`);
+  }
   return res.json();
+}
+
+// ---------- server-side cache (protects the NewsAPI daily quota) ----------
+const cache = new Map(); // url -> { data, expires }
+const inflight = new Map(); // url -> pending promise
+const FRESH_MS = 10 * 60 * 1000;
+
+async function cachedJson(url, ttl = FRESH_MS) {
+  const hit = cache.get(url);
+  if (hit && hit.expires > Date.now()) return hit.data;
+  if (inflight.has(url)) return inflight.get(url); // share one call between identical requests
+
+  const promise = getJson(url)
+    .then((data) => {
+      if (cache.size > 500) cache.delete(cache.keys().next().value); // keep memory bounded
+      cache.set(url, { data, expires: Date.now() + ttl });
+      return data;
+    })
+    .catch((err) => {
+      if (hit) {
+        console.log('Upstream failed, serving stale cached response');
+        return hit.data; // expired, but better than an error
+      }
+      throw err;
+    })
+    .finally(() => inflight.delete(url));
+
+  inflight.set(url, promise);
+  return promise;
 }
 
 const asyncRoute = (fn) => (req, res) =>
@@ -85,8 +123,7 @@ const normalizeMovie = (m) => {
     likes: isNaN(rating) ? 0 : Math.round(rating * 10),
   };
 };
-
-// ---------- /api/news?categories=technology,sports&page=1&pageSize=10&q=term ----------
+ 
 app.get('/api/news', asyncRoute(async (req, res) => {
   if (!NEWS_KEY) return res.status(500).json({ error: 'NEWS_API_KEY is not set' });
 
@@ -98,7 +135,7 @@ app.get('/api/news', asyncRoute(async (req, res) => {
 
   if (q) {
     const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&page=${page}&pageSize=${pageSize}&apiKey=${NEWS_KEY}`;
-    const data = await getJson(url);
+    const data = await cachedJson(url);
     items = data.articles.map((a) => normalizeArticle(a, 'general'));
   } else {
     const requested = String(req.query.categories || 'general')
@@ -108,22 +145,24 @@ app.get('/api/news', asyncRoute(async (req, res) => {
     const cats = requested.length ? requested : ['general'];
     const perCat = Math.max(1, Math.ceil(pageSize / cats.length));
 
-    const results = await Promise.all(
+    const results = await Promise.allSettled(
       cats.map(async (cat) => {
         const url = `https://newsapi.org/v2/top-headlines?country=us&category=${cat}&page=${page}&pageSize=${perCat}&apiKey=${NEWS_KEY}`;
-        const data = await getJson(url);
+        const data = await cachedJson(url);
         return data.articles.map((a) => normalizeArticle(a, cat));
       })
     );
-    items = results.flat();
+    const ok = results.filter((r) => r.status === 'fulfilled');
+    if (ok.length === 0) throw results[0].reason;  
+    items = ok.flatMap((r) => r.value);
   }
 
   items = items.filter((i) => i.title && i.title !== '[Removed]');
   res.json({ items, page });
 }));
-
-// ---------- /api/movies?mode=popular|trending&page=1&q=term ----------
+ 
 const POPULAR_KEYWORDS = ['avengers', 'batman', 'star wars', 'harry potter', 'spider-man', 'matrix', 'lord of the rings'];
+ 
 const TOP_MOVIE_IDS = [
   'tt0111161', // The Shawshank Redemption
   'tt0068646', // The Godfather
@@ -144,10 +183,7 @@ app.get('/api/movies', asyncRoute(async (req, res) => {
 
   const page = Number(req.query.page) || 1;
   const q = String(req.query.q || '').trim();
-  const mode = req.query.mode === 'trending' ? 'trending' : 'popular';
-
-  // Trending = top rated from the curated list, ranked by IMDb rating.
-  // This must run BEFORE any OMDb search, so it comes first.
+  const mode = req.query.mode === 'trending' ? 'trending' : 'popular'; 
   if (mode === 'trending' && !q) {
     if (page > 1) return res.json({ items: [], page });
 
@@ -168,29 +204,25 @@ app.get('/api/movies', asyncRoute(async (req, res) => {
     console.log(`Trending: ${items.length} of ${TOP_MOVIE_IDS.length} movies loaded`);
     return res.json({ items, page });
   }
-
-  // Search or popular feed
+ 
   let searchUrl;
   if (q) {
     searchUrl = `https://www.omdbapi.com/?s=${encodeURIComponent(q)}&type=movie&page=${page}&apikey=${OMDB_KEY}`;
   } else {
-    // Rotate keywords so each page of the feed shows different movies
     const keyword = POPULAR_KEYWORDS[Math.floor((page - 1) / 3) % POPULAR_KEYWORDS.length];
     const omdbPage = ((page - 1) % 3) + 1;
     searchUrl = `https://www.omdbapi.com/?s=${encodeURIComponent(keyword)}&type=movie&page=${omdbPage}&apikey=${OMDB_KEY}`;
   }
 
-  let search = await getJson(searchUrl);
-
-  // Multi-word search found nothing: retry with the longest word
+  let search = await cachedJson(searchUrl, 60 * 60 * 1000);  
   if ((search.Response === 'False' || !search.Search) && q.includes(' ')) {
     const longest = q.split(/\s+/).sort((a, b) => b.length - a.length)[0];
-    search = await getJson(
-      `https://www.omdbapi.com/?s=${encodeURIComponent(longest)}&type=movie&page=${page}&apikey=${OMDB_KEY}`
+    search = await cachedJson(
+      `https://www.omdbapi.com/?s=${encodeURIComponent(longest)}&type=movie&page=${page}&apikey=${OMDB_KEY}`,
+      60 * 60 * 1000
     );
-  }
+  } 
 
-  // OMDb answers 200 with Response:"False" for "not found" or "too many results"
   if (search.Response === 'False' || !search.Search) {
     if (search.Error) console.log(`OMDb: ${search.Error}`);
     return res.json({ items: [], page });
@@ -203,7 +235,7 @@ app.get('/api/movies', asyncRoute(async (req, res) => {
   const items = details.filter((d) => d.Title).map(normalizeMovie);
   res.json({ items, page });
 }));
-
+ 
 app.get('/api/social', (req, res) => {
   const page = Number(req.query.page) || 1;
   const pageSize = Number(req.query.pageSize) || 10;
@@ -223,15 +255,13 @@ app.get('/api/social', (req, res) => {
 });
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
-
-// ---------- WebSocket: live feed ----------
+ 
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 const LIVE_INTERVAL_MS = Number(process.env.LIVE_INTERVAL_MS) || 8000;
 
-wss.on('connection', (ws, req) => {
-  // Browsers don't enforce CORS on WebSockets, so check the origin ourselves
+wss.on('connection', (ws, req) => { 
   const origin = req.headers.origin;
   if (origin && !ALLOWED_ORIGINS.includes(origin)) {
     ws.close(1008, 'Origin not allowed');
@@ -245,7 +275,7 @@ wss.on('connection', (ws, req) => {
   ws.on('error', (err) => console.error('WS client error:', err.message));
   ws.send(JSON.stringify({ type: 'connected' }));
 });
-
+ 
 const broadcastTimer = setInterval(() => {
   if (wss.clients.size === 0) return;
   const message = JSON.stringify({ type: 'new_item', payload: generateLiveItem() });
@@ -253,7 +283,7 @@ const broadcastTimer = setInterval(() => {
     if (client.readyState === WebSocket.OPEN) client.send(message);
   }
 }, LIVE_INTERVAL_MS);
-
+ 
 const heartbeatTimer = setInterval(() => {
   for (const client of wss.clients) {
     if (client.isAlive === false) {

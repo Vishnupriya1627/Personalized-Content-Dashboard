@@ -17,6 +17,7 @@ import autoMergeLevel2 from 'redux-persist/es/stateReconciler/autoMergeLevel2';
 import feedReducer from '@/features/feed/feedSlice';
 import searchReducer from '@/features/search/searchSlice';
 import liveReducer from '@/features/live/liveSlice';
+import readReducer from '@/features/read/readSlice';
 
 const storage = {
   getItem: (key: string) => Promise.resolve(localStorage.getItem(key)),
@@ -36,7 +37,8 @@ const rootReducer = combineReducers({
   favorites: favoritesReducer,
   feed: feedReducer,
   search: searchReducer,
-  live: liveReducer, 
+  live: liveReducer,
+  read: readReducer,  
   [contentApi.reducerPath]: contentApi.reducer,
 });
 
@@ -44,7 +46,7 @@ const persistedReducer = persistReducer(
   {
     key: 'root',
     storage,
-    whitelist: ['preferences', 'favorites', 'feed'],
+    whitelist: ['preferences', 'favorites', 'feed', 'read'],  
     stateReconciler: autoMergeLevel2,
   },
   rootReducer

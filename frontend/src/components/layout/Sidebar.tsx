@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Flame, Heart, Settings, X } from 'lucide-react';
+import { Home, Flame, Heart, BookCheck, Settings, X } from 'lucide-react';
 
 const links = [
   { to: '/', label: 'My Feed', icon: Home, end: true },
   { to: '/trending', label: 'Trending', icon: Flame, end: false },
   { to: '/favorites', label: 'Favorites', icon: Heart, end: false },
+  { to: '/read', label: 'Read', icon: BookCheck, end: false },  
   { to: '/settings', label: 'Settings', icon: Settings, end: false },
 ];
 

@@ -9,6 +9,7 @@ import favoritesReducer from '@/features/favorites/favoritesSlice';
 import feedReducer from '@/features/feed/feedSlice';
 import searchReducer from '@/features/search/searchSlice';
 import liveReducer from '@/features/live/liveSlice';
+import readReducer from '@/features/read/readSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -16,7 +17,8 @@ const rootReducer = combineReducers({
   favorites: favoritesReducer,
   feed: feedReducer,
   search: searchReducer,
-  live: liveReducer, // new
+  live: liveReducer,
+  read: readReducer,  
 });
 
 export type TestState = ReturnType<typeof rootReducer>;

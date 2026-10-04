@@ -8,10 +8,12 @@ import FavoritesPage from '@/pages/FavoritesPage';
 import SettingsPage from '@/pages/SettingsPage';
 import { MotionConfig } from 'framer-motion';
 import SearchPage from '@/pages/SearchPage';
+import ReadPage from '@/pages/ReadPage';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/search', element: <SearchPage /> },
+  
   {
     element: <ProtectedRoute />,
     children: [
@@ -22,6 +24,7 @@ const router = createBrowserRouter([
           { path: '/trending', element: <TrendingPage /> },
           { path: '/favorites', element: <FavoritesPage /> },
           { path: '/settings', element: <SettingsPage /> },
+          { path: '/read', element: <ReadPage /> },
         ],
       },
     ],
