@@ -14,6 +14,7 @@ import preferencesReducer from '@/features/preferences/preferencesSlice';
 import favoritesReducer from '@/features/favorites/favoritesSlice';
 import { contentApi } from '@/features/api/contentApi';
 import autoMergeLevel2 from 'redux-persist/es/stateReconciler/autoMergeLevel2';
+import feedReducer from '@/features/feed/feedSlice';
 
 const storage = {
   getItem: (key: string) => Promise.resolve(localStorage.getItem(key)),
@@ -31,6 +32,7 @@ const rootReducer = combineReducers({
   auth: authReducer,
   preferences: preferencesReducer,
   favorites: favoritesReducer,
+  feed: feedReducer,
   [contentApi.reducerPath]: contentApi.reducer,
 });
 
@@ -38,7 +40,7 @@ const persistedReducer = persistReducer(
   {
     key: 'root',
     storage,
-    whitelist: ['preferences', 'favorites'],
+    whitelist: ['preferences', 'favorites', 'feed'],
     stateReconciler: autoMergeLevel2,
   },
   rootReducer

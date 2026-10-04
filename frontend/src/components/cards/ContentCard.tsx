@@ -9,6 +9,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleFavorite } from "@/features/favorites/favoritesSlice";
 import type { ContentItem, ContentType } from "@/types/content";
+import { motion } from "framer-motion";
 
 const typeMeta: Record<
   ContentType,
@@ -35,7 +36,13 @@ export default function ContentCard({ item }: { item: ContentItem }) {
   });
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface transition hover:-translate-y-0.5 hover:shadow-md">
+    <motion.article
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.25 }}
+      className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface transition-shadow hover:shadow-md"
+    >
       <div className="relative h-44 w-full shrink-0 overflow-hidden bg-border">
         {showImage ? (
           <img
@@ -103,6 +110,6 @@ export default function ContentCard({ item }: { item: ContentItem }) {
           </a>
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }

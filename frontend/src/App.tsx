@@ -6,6 +6,7 @@ import FeedPage from '@/pages/FeedPage';
 import TrendingPage from '@/pages/TrendingPage';
 import FavoritesPage from '@/pages/FavoritesPage';
 import SettingsPage from '@/pages/SettingsPage';
+import { MotionConfig } from 'framer-motion';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -26,5 +27,9 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <MotionConfig reducedMotion="user">
+      <RouterProvider router={router} />
+    </MotionConfig>
+  );
 }
