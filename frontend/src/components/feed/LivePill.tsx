@@ -29,7 +29,7 @@ export default function LivePill() {
         {count > 0 ? `${count} new ${count === 1 ? 'item' : 'items'} available` : ''}
       </p>
 
-      <div className="pointer-events-none sticky top-20 z-10 flex h-0 justify-center">
+      <div className="pointer-events-none sticky top-20 z-30 flex h-0 justify-center">
         {count > 0 && (
           <motion.button
             type="button"
