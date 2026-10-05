@@ -63,7 +63,7 @@ export const posts = Array.from({ length: 60 }, (_, i) => {
     description: t.text,
     image:
       i % 3 === 0 ? `https://picsum.photos/seed/pulse${i}/600/400` : undefined,
-    url: `https://example.com/posts/${i + 1}`,
+    url: `https://www.google.com/search?q=${encodeURIComponent('#' + t.tag)}`,
     category: t.tag,
     source: "Social",
     publishedAt: new Date(Date.now() - i * 3600_000).toISOString(),

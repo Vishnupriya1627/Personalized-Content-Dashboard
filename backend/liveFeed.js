@@ -45,22 +45,27 @@ export function generateLiveItem() {
   };
 
   if (Math.random() < 0.6) {
-    return {
-      ...base,
-      type: 'social',
-      title: pick(HANDLES),
-      description: pick(CONTENT[category].posts),
-      image: Math.random() < 0.4 ? `https://picsum.photos/seed/${id}/600/400` : undefined,
-      source: 'Live',
-      likes: Math.floor(Math.random() * 200),
-    };
-  }
-
   return {
     ...base,
-    type: 'news',
-    title: pick(CONTENT[category].headlines),
-    description: 'Live update from the newsroom. More details are expected shortly.',
-    source: 'Live Wire',
+    type: 'social',
+    title: pick(HANDLES),
+    url: `https://www.google.com/search?q=${encodeURIComponent('#' + category)}`,  
+    description: pick(CONTENT[category].posts),
+    image: `https://picsum.photos/seed/${id}/600/400`,
+    source: 'Live',
+    likes: Math.floor(Math.random() * 200),
   };
+}
+
+  const title = pick(CONTENT[category].headlines);
+
+return {
+  ...base,
+  type: 'news',
+  title,
+  url: `https://www.google.com/search?q=${encodeURIComponent(title)}`,
+  description: 'Live update from the newsroom. More details are expected shortly.',
+  image: `https://picsum.photos/seed/${id}/600/400`,
+  source: 'Live Wire',
+};
 }

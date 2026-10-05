@@ -59,7 +59,7 @@ const ALL = Object.entries(HEADLINES).flatMap(([category, titles]) =>
     title,
     description: 'Sample headline shown because the live news service is temporarily unavailable.',
     image: `https://picsum.photos/seed/${category}${i}/600/400`,
-    url: 'https://example.com/sample-news',
+    url: `https://www.google.com/search?q=${encodeURIComponent(title)}`,
     category,
     source: 'Sample News',
     publishedAt: new Date(now - (i * 5 + 1) * 3600_000).toISOString(),
