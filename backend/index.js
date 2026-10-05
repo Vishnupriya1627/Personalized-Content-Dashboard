@@ -7,6 +7,7 @@ import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import { posts } from './mockSocial.js';
 import { generateLiveItem } from './liveFeed.js';
+import { sampleByCategory, sampleBySearch } from './mockNews.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -135,8 +136,13 @@ app.get('/api/news', asyncRoute(async (req, res) => {
 
   if (q) {
     const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&page=${page}&pageSize=${pageSize}&apiKey=${NEWS_KEY}`;
-    const data = await cachedJson(url);
-    items = data.articles.map((a) => normalizeArticle(a, 'general'));
+    try {
+      const data = await cachedJson(url);
+      items = data.articles.map((a) => normalizeArticle(a, 'general'));
+    } catch (err) {
+      console.log(`NewsAPI failed (${err.message}). Using sample news for search.`);
+      items = sampleBySearch(q, page, pageSize);
+    }
   } else {
     const requested = String(req.query.categories || 'general')
       .split(',')
@@ -145,16 +151,19 @@ app.get('/api/news', asyncRoute(async (req, res) => {
     const cats = requested.length ? requested : ['general'];
     const perCat = Math.max(1, Math.ceil(pageSize / cats.length));
 
-    const results = await Promise.allSettled(
+    const results = await Promise.all(
       cats.map(async (cat) => {
         const url = `https://newsapi.org/v2/top-headlines?country=us&category=${cat}&page=${page}&pageSize=${perCat}&apiKey=${NEWS_KEY}`;
-        const data = await cachedJson(url);
-        return data.articles.map((a) => normalizeArticle(a, cat));
+        try {
+          const data = await cachedJson(url);
+          return data.articles.map((a) => normalizeArticle(a, cat));
+        } catch (err) {
+          console.log(`NewsAPI failed for ${cat} (${err.message}). Using sample news.`);
+          return sampleByCategory(cat, page, perCat);
+        }
       })
     );
-    const ok = results.filter((r) => r.status === 'fulfilled');
-    if (ok.length === 0) throw results[0].reason;  
-    items = ok.flatMap((r) => r.value);
+    items = results.flat();
   }
 
   items = items.filter((i) => i.title && i.title !== '[Removed]');
